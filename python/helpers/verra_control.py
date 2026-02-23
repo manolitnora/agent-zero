@@ -85,6 +85,7 @@ class VerraController:
     STREAM_KEY = "_verra_last_stream_response"
     DREAM_PROFILE_KEY = "_verra_dream_profile"
     DREAM_SCHEDULER_KEY = "_verra_dream_scheduler"
+    TRUST_INTEGRITY_KEY = "_verra_trust_integrity"
 
     @classmethod
     def bootstrap(cls, agent) -> None:

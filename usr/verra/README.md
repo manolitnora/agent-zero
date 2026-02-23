@@ -21,6 +21,8 @@ This folder stores Verra runtime data for the Agent Zero integration:
 - `self_update_state.json` : Verra self-update learner state (verifiable reward metrics, adaptive knobs, cursors)
 - `receipt_chain_config.json` : Tamper-evident receipt-chain config (hash/HMAC settings)
 - `receipt_chain.key` : Local HMAC signing key for receipt/state chain signing (generated if no env key is set)
+- `trust_integrity_config.json` : Startup integrity verifier config (receipt-chain verification + quarantine behavior)
+- `trust_integrity_state.json` : Latest integrity verification results and quarantine status
 - `skill_registry.json` : Skill trust registry (allowed/trust-tier/scopes)
 - `memory.json` : lightweight preference + episodic memory learned from turns
 
@@ -114,6 +116,12 @@ Receipt chain (tamper-evident receipts):
 - `self_update_state.json` gets both chained `history` records and a top-level state hash/signature
 - Per-record metadata is stored under `_chain`; document summaries are stored under `_receipt_chain`
 - Signing uses HMAC (`VERRA_RECEIPT_CHAIN_KEY`) if provided, otherwise Verra generates a local `receipt_chain.key`
+
+Startup trust integrity verifier:
+- Runs at agent initialization and verifies chained receipts/state files (promotion, sandbox exec, tool sim, economic receipts/ledger, self-update state)
+- Raises a Verra quarantine state on verification failures/tamper
+- Quarantine blocks live risky/economic/destructive actions in the policy gate but still allows read-only analysis and simulation previews
+- Legacy/uninitialized unchained files are warnings by default (configurable)
 
 Autonomy modes (in `policy.json`):
 - `assist`

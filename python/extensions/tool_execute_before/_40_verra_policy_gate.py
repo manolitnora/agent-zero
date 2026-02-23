@@ -4,7 +4,14 @@ from datetime import datetime, timezone
 from python.helpers.extension import Extension
 from python.helpers.errors import RepairableException
 from python.helpers.verra_control import VerraController
-from python.helpers import verra_policy, verra_economics, verra_payments, verra_tool_sim, verra_sandbox
+from python.helpers import (
+    verra_policy,
+    verra_economics,
+    verra_payments,
+    verra_tool_sim,
+    verra_sandbox,
+    verra_trust_integrity,
+)
 
 
 class VerraPolicyGate(Extension):
@@ -20,6 +27,7 @@ class VerraPolicyGate(Extension):
         payments_path = Path(runtime.data_dir) / "payments.json"
         payment_receipts_path = Path(runtime.data_dir) / "economic_receipts.json"
         tool_sim_receipts_path = Path(runtime.data_dir) / "tool_simulation_receipts.json"
+        trust_integrity_state_path = Path(runtime.data_dir) / "trust_integrity_state.json"
         sandbox_cfg_path = Path(runtime.data_dir) / "sandbox_config.json"
         sandbox_state_path = Path(runtime.data_dir) / "sandbox_state.json"
         policy = verra_policy.load_policy(policy_path)
@@ -29,6 +37,10 @@ class VerraPolicyGate(Extension):
         tool_sim_receipts = verra_tool_sim.load_receipts(tool_sim_receipts_path)
         verra_economics.set_limit_from_policy(ledger, policy)
         budget = verra_economics.budget_summary(ledger)
+        trust_integrity = self.agent.get_data(VerraController.TRUST_INTEGRITY_KEY)
+        if not trust_integrity:
+            trust_integrity = verra_trust_integrity.load_state(trust_integrity_state_path)
+            self.agent.set_data(VerraController.TRUST_INTEGRITY_KEY, trust_integrity)
 
         session = VerraController._load_session(self.agent)
         hints = session.get("last_policy_hints") or {}
@@ -74,6 +86,17 @@ class VerraPolicyGate(Extension):
                 decision["blocked"] = True
                 decision["allowed"] = False
                 decision["reason"] = "payment quote exceeds adapter max quote limit"
+
+        # Integrity quarantine: allow simulations and low-risk reads, but block live risky actions.
+        if bool((trust_integrity or {}).get("quarantine_active", False)):
+            decision["integrity_quarantine"] = True
+            decision["integrity_status"] = str((trust_integrity or {}).get("status", "quarantine"))
+            decision["integrity_reason"] = str((trust_integrity or {}).get("quarantine_reason", "trust integrity verification failure"))
+            allow_read_only = decision.get("risk_level") == "low" and not decision.get("economic") and not decision.get("destructive")
+            if not flags.get("simulate") and not allow_read_only:
+                decision["blocked"] = True
+                decision["allowed"] = False
+                decision["reason"] = f"trust integrity quarantine active: {decision['integrity_reason']}"
 
         # Store decision for post-tool receipts / UX.
         self.agent.set_data(
@@ -212,6 +235,10 @@ class VerraPolicyGate(Extension):
         if decision.get("requires_simulation"):
             lines.append(
                 "Use a preview first: call the same tool with tool_args including `verra_simulate: true`."
+            )
+        if decision.get("integrity_quarantine"):
+            lines.append(
+                "Trust integrity quarantine is active. Only read-only analysis or simulation previews should be attempted until integrity is restored."
             )
         if decision.get("require_live_approval"):
             lines.append(
