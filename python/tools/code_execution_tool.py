@@ -474,6 +474,14 @@ class CodeExecution(Tool):
         return output
 
     async def ensure_cwd(self) -> str | None:
+        explicit_cwd = self.args.get("cwd")
+        if explicit_cwd:
+            try:
+                normalized = files.normalize_a0_path(str(explicit_cwd))
+                await runtime.call_development_function(make_dir, normalized)
+                return normalized
+            except Exception:
+                pass
         project_name = projects.get_context_project_name(self.agent.context)
         if project_name:
             path = projects.get_project_folder(project_name)

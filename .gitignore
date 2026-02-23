@@ -29,6 +29,8 @@ tmp/**
 !tmp/**/
 usr/**
 !usr/**/
+usr/verra/*
+!usr/verra/README.md
 
 # Handle knowledge directory
 
