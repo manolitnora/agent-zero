@@ -7,7 +7,7 @@ from fnmatch import fnmatch
 from pathlib import Path
 from typing import Any
 
-from python.helpers import verra_receipt_chain
+from python.helpers import verra_native_events, verra_receipt_chain
 
 
 def _now_iso() -> str:
@@ -75,6 +75,7 @@ def save_receipts(path: Path, data: dict[str, Any]) -> None:
         doc_kind="verra_economic_receipts",
     )
     path.write_text(json.dumps(data, indent=2) + "\n", "utf-8")
+    verra_native_events.rebuild_native_events(path.parent)
 
 
 def quote(

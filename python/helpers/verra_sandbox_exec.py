@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from python.helpers import verra_receipt_chain
+from python.helpers import verra_native_events, verra_receipt_chain
 
 
 def _now_iso() -> str:
@@ -28,6 +28,7 @@ def save_receipts(path: Path, doc: dict[str, Any]) -> None:
         doc_kind="verra_sandbox_exec_receipts",
     )
     path.write_text(json.dumps(doc, indent=2) + "\n", "utf-8")
+    verra_native_events.rebuild_native_events(path.parent)
 
 
 def append_receipt(doc: dict[str, Any], receipt: dict[str, Any], max_items: int = 1000) -> None:

@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from python.helpers import verra_receipt_chain
+from python.helpers import verra_native_events, verra_receipt_chain
 
 
 SAFE_SHELL_CMDS = {"pwd", "ls", "dir", "echo", "whoami", "uname"}
@@ -51,6 +51,7 @@ def save_receipts(path: Path, data: dict[str, Any]) -> None:
         doc_kind="verra_tool_sim_receipts",
     )
     path.write_text(json.dumps(data, indent=2) + "\n", "utf-8")
+    verra_native_events.rebuild_native_events(path.parent)
 
 
 def append_receipt(receipts_doc: dict[str, Any], receipt: dict[str, Any], max_items: int = 1000) -> None:
